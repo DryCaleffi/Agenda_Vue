@@ -1,6 +1,7 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
 import EventList from '../views/EventList.vue';
+import CalendarView from '../views/CalendarView.vue';
 import EventForm from '../components/EventForm.vue';
 
 const router = createRouter({
@@ -10,6 +11,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: EventList
+    },
+    {
+      path: '/calendar',
+      name: 'calendar',
+      component: CalendarView
     },
     {
       path: '/add',

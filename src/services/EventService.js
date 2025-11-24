@@ -4,7 +4,12 @@ const STORAGE_KEY = 'agenda_events_v2';
 export default {
   getEvents() {
     const events = localStorage.getItem(STORAGE_KEY);
-    return events ? JSON.parse(events) : [];
+    const parsedEvents = events ? JSON.parse(events) : [];
+    // Garantir que eventos antigos tenham status padrão
+    return parsedEvents.map(event => ({
+      ...event,
+      status: event.status || 'Pendente'
+    }));
   },
 
   getEvent(id) {

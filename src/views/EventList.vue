@@ -12,8 +12,16 @@
         <small v-if="nextEvent">{{ nextEvent.title }}</small>
       </div>
       <div class="stat-card">
-        <h3>Alta Prioridade</h3>
-        <p>{{ events.filter(e => e.priority === 'Alta').length }}</p>
+        <h3>Pendentes</h3>
+        <p>{{ events.filter(e => e.status === 'Pendente' || !e.status).length }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Concluídos</h3>
+        <p>{{ events.filter(e => e.status === 'Concluído').length }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Trabalho</h3>
+        <p>{{ events.filter(e => e.category === 'Trabalho').length }}</p>
       </div>
     </div>
 
@@ -33,6 +41,21 @@
         <option>Estudos</option>
         <option>Saúde</option>
         <option>Lazer</option>
+      </select>
+
+      <select v-model="filterDate">
+        <option value="">Todas as Datas</option>
+        <option value="today">Hoje</option>
+        <option value="week">Esta Semana</option>
+        <option value="month">Este Mês</option>
+      </select>
+
+      <select v-model="filterStatus">
+        <option value="">Todos os Status</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Concluído">Concluído</option>
+        <option value="Cancelado">Cancelado</option>
       </select>
 
       <button @click="$router.push('/add')" class="btn btn-primary">
@@ -66,7 +89,10 @@
         :class="{ 'is-past': isPast(event.date) }"
       >
         <div class="card-header">
-          <span class="badge" :class="event.priority">{{ event.priority }}</span>
+          <div class="badges">
+            <span class="badge" :class="event.priority">{{ event.priority }}</span>
+            <span class="badge status" :class="getStatusClass(event.status || 'Pendente')">{{ event.status || 'Pendente' }}</span>
+          </div>
           <span class="category-tag">{{ event.category }}</span>
         </div>
         
@@ -85,6 +111,13 @@
         <p class="event-desc">{{ event.description }}</p>
 
         <div class="card-footer">
+          <button @click="duplicateEvent(event)" class="btn-icon" title="Duplicar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          
           <button @click="$router.push(`/edit/${event.id}`)" class="btn-icon" title="Editar">
              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -125,6 +158,8 @@ const emit = defineEmits(['notify']);
 const events = ref([]);
 const search = ref('');
 const filterCategory = ref('');
+const filterDate = ref('');
+const filterStatus = ref('');
 const now = ref(new Date());
 let timer = null;
 
@@ -145,7 +180,9 @@ const filteredEvents = computed(() => {
   return events.value.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(search.value.toLowerCase());
     const matchesCat = !filterCategory.value || event.category === filterCategory.value;
-    return matchesSearch && matchesCat;
+    const matchesStatus = !filterStatus.value || event.status === filterStatus.value;
+    const matchesDate = filterByDate(event);
+    return matchesSearch && matchesCat && matchesStatus && matchesDate;
   });
 });
 
@@ -170,11 +207,65 @@ const remove = (id) => {
   }
 };
 
+const duplicateEvent = (event) => {
+  const newEvent = {
+    ...event,
+    id: undefined,
+    title: `${event.title} (Cópia)`,
+    status: 'Pendente'
+  };
+  EventService.saveEvent(newEvent);
+  loadEvents();
+  emit('notify', 'Evento duplicado com sucesso!');
+};
+
+const filterByDate = (event) => {
+  if (!filterDate.value) return true;
+  
+  const eventDate = new Date(event.date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  switch (filterDate.value) {
+    case 'today':
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+      return eventDate >= today && eventDate <= todayEnd;
+    
+    case 'week':
+      const weekStart = new Date(today);
+      const weekEnd = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      return eventDate >= weekStart && eventDate <= weekEnd;
+    
+    case 'month':
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+      return eventDate >= monthStart && eventDate <= monthEnd;
+    
+    default:
+      return true;
+  }
+};
+
 const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 };
 
 const isPast = (dateStr) => new Date(dateStr) < now.value;
+
+const getStatusClass = (status) => {
+  const statusMap = {
+    'Pendente': 'pendente',
+    'Em andamento': 'em-andamento', 
+    'Concluído': 'concluido',
+    'Cancelado': 'cancelado'
+  };
+  return statusMap[status] || 'pendente';
+};
 
 const exportEvents = () => {
   const data = EventService.exportData();
@@ -251,6 +342,13 @@ const importEvents = (e) => {
 
 .card-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
 .category-tag { font-size: 0.8rem; color: var(--text-muted); }
+
+.badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.badge.status.pendente { background: #f59e0b; color: white; }
+.badge.status.em-andamento { background: #3b82f6; color: white; }
+.badge.status.concluido { background: #22c55e; color: white; }
+.badge.status.cancelado { background: #ef4444; color: white; }
 
 .event-date { 
   color: var(--primary); 

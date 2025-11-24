@@ -36,6 +36,16 @@
       </div>
 
       <div class="form-group">
+        <label>Status</label>
+        <select v-model="form.status">
+          <option value="Pendente">Pendente</option>
+          <option value="Em andamento">Em andamento</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Descrição Detalhada</label>
         <textarea v-model="form.description" rows="4" placeholder="Detalhes do evento..."></textarea>
       </div>
@@ -64,6 +74,7 @@ const form = ref({
   date: '',
   category: 'Pessoal',
   priority: 'Média',
+  status: 'Pendente',
   description: ''
 });
 
@@ -73,6 +84,12 @@ onMounted(() => {
     isEditing.value = true;
     const event = EventService.getEvent(id);
     if (event) form.value = { ...event };
+  }
+  
+  // Pré-preencher data se fornecida via query parameter
+  const presetDate = route.query.date;
+  if (presetDate && !id) {
+    form.value.date = presetDate;
   }
 });
 
