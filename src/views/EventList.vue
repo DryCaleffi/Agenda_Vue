@@ -20,9 +20,9 @@
         <p>{{ events.filter(e => e.status === 'Concluído').length }}</p>
       </div>
       <div class="stat-card">
-        <h3>Trabalho</h3>
-        <p>{{ events.filter(e => e.category === 'Trabalho').length }}</p>
-      </div>
+  <h3>Cancelados</h3>
+  <p>{{ events.filter(e => e.status === 'Cancelado').length }}</p>
+</div>
     </div>
 
     <div class="controls">
